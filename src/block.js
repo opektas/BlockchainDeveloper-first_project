@@ -16,11 +16,11 @@ class Block {
 
     // Constructor - argument data will be the object containing the transaction data
 	constructor(data){
-		this.hash = null;                                           // Hash of the block
-		this.height = 0;                                            // Block Height (consecutive number of each block)
+		this.hash = null;                                                // Hash of the block
+		this.height = 0;                                                 // Block Height (consecutive number of each block)
 		this.body = Buffer.from(JSON.stringify(data)).toString('hex');   // Will contain the transactions stored in the block, by default it will encode the data
-		this.time = 0;                                              // Timestamp for the Block creation
-		this.previousBlockHash = null;                              // Reference to the previous Block Hash
+		this.time = 0;                                                   // Timestamp for the Block creation
+		this.previousBlockHash = null;                                   // Reference to the previous Block Hash
     }
     
     /**
@@ -40,13 +40,13 @@ class Block {
         return new Promise((resolve, reject) =>{
                 try{
                     // Save in auxiliary variable the current block hash
-                    const currentHash = self.hash;
+                    const currentBlockHash = self.hash;
                     self.hash = null;
                     // Recalculate the hash of the Block
-                    const newHash = SHA256(json.stringify(self)).toString();
-                    self.hash = currentHash;
+                    const newBlockHash = SHA256(json.stringify(self)).toString();
+                    self.hash = currentBlockHash;
                     // Comparing if the hashes changed
-                    resolve(currentHash == newHash);
+                    resolve(currentBlockHash == newBlockHash);
                 } catch(error){
                     reject(new Error(error));
                 }
@@ -67,22 +67,22 @@ class Block {
         let self = this;
         return new Promise(async (resolve, reject) => {
         // Getting the encoded data saved in the Block
-            let enc_data = this.body;
+            let encrypted_data = this.body;
         // Decoding the data to retrieve the JSON representation of the object
-            let dec_data = hex2ascii(enc_data);
+            let decrypted_data = hex2ascii(encrypted_data);
         // Parse the data to an object to be retrieve.
-            let decData_in_JSON = JSON.parse(dec_data);
+            let dData_JSON = JSON.parse(decrypted_data);
         // Resolve with the data if the object isn't the Genesis block
             if(this.height == 0) {
-                resolve("This the Genesis block");
+                resolve("It is the Genesis block");
             } else {
-                resolve(decData_in_JSON);
+                resolve(dData_JSON);
             }
         });
 
+   
 
-    }
-
+}
 }
 
 module.exports.Block = Block;                    // Exposing the Block class as a module

@@ -70,13 +70,13 @@ class Blockchain {
             block.previousBlockHash= self.chain[self.chain.length-1].hash; //previous block hash
            }
         block.hash = SHA256(JSON.stringify(block)).toString(); // calculate hash of block
-        console.debug('validation of chain starts here');  //Validations starts here
-        let.errors = await self.validateChain(); // call the validate method
+        console.debug('validation of chain starts');  //Validations starts here
+        let errors = await self.validateChain(); // call the validate method
         console.log(errors)
-        console.debug('validation of chain ends here'); 
+        console.debug('validation of chain ends'); 
         if(errors.length == 0){
             self.chain.push(block); // push new block
-            self.height++; // increment height
+            self.height++;          // increment height
             resolve(block)
         } else {
             reject(errors);
@@ -95,8 +95,8 @@ class Blockchain {
      */
     requestMessageOwnershipVerification(address) {
         return new Promise((resolve) => {
-            const OwnershipMessage = '${address}:${new Date().getTime().toString().slice(0, -3)}:starRegistry'; //construct the message as explained, with the address + time + starRegistry
-            resolve(ownershipMessage);
+            const ownerMessage = '${address}:${new Date().getTime().toString().slice(0, -3)}:starRegistry'; // date, time, starRegistry
+            resolve(ownerMessage);
         });
     }
 
@@ -120,15 +120,15 @@ class Blockchain {
     submitStar(address, message, signature, star) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-            let temps = parseInt(message.split(';'),[1]);                               //Get the time from the message sent as a parameter
-            let currentTime = parseInt(new Date().getTime().toString().slice(0,-3));    //Get the current time
-            if(currentTime - temps < (5*60)){                                           //Check if the time elapsed is less than 5 minutes
+            let time_parameter = parseInt(message.split(';'),[1]);                               //Get the time from the message sent as a parameter
+            let cTime = parseInt(new Date().getTime().toString().slice(0,-3));    //Get the current time
+            if(cTime - time_parameter < (5*60)){                                        //Checking of the time elapsed is less than 5 minutes
                 if(bitcoinMessage.verify(message, address, signature)) {                //If yes verify the message
-                    let block = new BlockClass.Block({"owner": address, "star": star}); //creation of the new block with the owner and the star 
-                    self._addBlock(block);                                              //add the block
-                    resolve(block);                                                     //resolve with the new block
+                    let nblock = new BlockClass.Block({"owner": address, "star": star}); //creation of the new block 
+                    self._addBlock(nblock);                                              //add the block
+                    resolve(nblock);                                                     //resolve with the new block
                 } else {
-                    reject(Error('Message is not verified'))  // Error message
+                    reject(Error('Message is not verified!!'))  // Error message
                 } 
             } else {
                 reject(Error('Too much time has passed, stay below 5 minutes')) // Error message
@@ -202,29 +202,36 @@ class Blockchain {
     validateChain() {
         let self = this;
         let errorLog = [];
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve) => {
+            // Go through each block and make sure stored hash of
+            // previous block matches actual hash of previous block
             let validatePromises = [];
             self.chain.forEach((block, index) => {
-                if(block.height>0) {
-                    const previousBlock = self.chain[index-1];
-                    if(block.previousBlockHash != previousBlock.hash) {
-                        const ErrorMessage = `Block ${index} previousBlockHash set to ${block.previousBlockHash}, but actual previous block hash was ${previousBlock.hash}`;
-                        errorLog.push(ErrorMessage);
+                if (block.height > 0) {
+                    const previousBlock = self.chain[index - 1];
+                    if (block.previousBlockHash !== previousBlock.hash) {
+                        const errorMessage = `Block ${index} previousBlockHash set to ${block.previousBlockHash}, but actual previous block hash was ${previousBlock.hash}`;
+                        errorLog.push(errorMessage);
                     }
                 }
-                validatePromises.push(blcok.validate()); // store promise to validate each block
-            });
-            Promise.all(validatePromises).then(validatedBlocks => {
-                validatedBlocks.forEach((valid, index) => {
-                    if(!valid){
-                        const invalidBlock = self.chain[index];
-                        const ErrorMessage = 'Block ${index} hash (${invalidBlock.hash}) is valid';
-                        errorLog.push(ErrorMessage);
-                    }
-                });
-                resolve(errorLog);
+
+                // Store promise to validate each block
+                validatePromises.push(block.validate());
             });
 
+            // Collect results of each block's validate call
+            Promise.all(validatePromises)
+                .then(validatedBlocks => {
+                    validatedBlocks.forEach((valid, index) => {
+                        if (!valid) {
+                            const invalidBlock = self.chain[index];
+                            const errorMessage = `Block ${index} hash (${invalidBlock.hash}) is invalid`;
+                            errorLog.push(errorMessage);
+                        }
+                    });
+
+                    resolve(errorLog);
+                });
         });
     }
 
